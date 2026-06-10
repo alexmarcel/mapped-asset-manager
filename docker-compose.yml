@@ -9,7 +9,7 @@ services:
       - .env
     environment:
       NODE_ENV: production
-      APP_URL: https://aset.alexmarcel.com
+      APP_URL: https://your-site.com
       UPLOAD_DIR: /app/data/uploads
     volumes:
       - ./data:/app/data
@@ -17,7 +17,7 @@ services:
       - web
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.aset.rule=Host(`aset.alexmarcel.com`)"
+      - "traefik.http.routers.aset.rule=Host(`your-site.com`)"
       - "traefik.http.routers.aset.entrypoints=websecure"
       - "traefik.http.routers.aset.tls.certresolver=myresolver"
       - "traefik.http.services.aset.loadbalancer.server.port=3000"
