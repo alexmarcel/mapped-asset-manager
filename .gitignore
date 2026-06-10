@@ -1,0 +1,12 @@
+.next
+node_modules
+dist
+coverage
+.env
+.env.local
+*.tsbuildinfo
+minio-data
+postgres-data
+data/*.db
+data/*.db-journal
+data/*.db-wal

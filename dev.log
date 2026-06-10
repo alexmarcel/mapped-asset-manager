@@ -1,0 +1,60 @@
+
+> mapped-asset-manager@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.5.19
+   - Local:        http://localhost:3000
+   - Network:      http://100.83.35.29:3000
+   - Environments: .env
+   - Experiments (use with caution):
+     · serverActions
+
+ ✓ Starting...
+ ✓ Ready in 3.7s
+ ○ Compiling /assets ...
+ ✓ Compiled /assets in 1457ms (843 modules)
+ GET /assets 200 in 2007ms
+ GET /assets?userId=cmq6mt99f0000rxrcmdj4klez 200 in 83ms
+ ○ Compiling /api/assets ...
+ ✓ Compiled /api/assets in 708ms (875 modules)
+ GET /api/assets?userId=cmq6mt99f0000rxrcmdj4klez 200 in 904ms
+ GET /api/assets?userId=cmq6mt99f0000rxrcmdj4klez 200 in 33ms
+ ✓ Compiled /settings in 455ms (889 modules)
+ GET /settings 200 in 607ms
+ GET /assets?userId=cmq7bomke0000rxoo1pe8gdyx 200 in 51ms
+ GET /api/assets?userId=cmq7bomke0000rxoo1pe8gdyx 200 in 51ms
+ GET /api/assets?userId=cmq7bomke0000rxoo1pe8gdyx 200 in 18ms
+ ✓ Compiled /assets/new in 468ms (901 modules)
+ GET /assets/new 200 in 618ms
+ GET /settings 200 in 43ms
+ ✓ Compiled in 204ms (353 modules)
+ ✓ Compiled in 1211ms (367 modules)
+ ✓ Compiled in 306ms (367 modules)
+ ✓ Compiled in 333ms (367 modules)
+ ✓ Compiled in 200ms (367 modules)
+ ✓ Compiled in 156ms (367 modules)
+ ✓ Compiled in 117ms (367 modules)
+ ✓ Compiled in 226ms (367 modules)
+ ✓ Compiled in 184ms (367 modules)
+ ✓ Compiled in 152ms (367 modules)
+ ✓ Compiled in 137ms (367 modules)
+ ✓ Compiled in 113ms (353 modules)
+ ✓ Compiled in 137ms (367 modules)
+ ✓ Compiled in 137ms (367 modules)
+ ✓ Compiled in 136ms (367 modules)
+ ✓ Compiled in 129ms (367 modules)
+ ✓ Compiled in 182ms (367 modules)
+ ✓ Compiled in 126ms (367 modules)
+ ✓ Compiled in 123ms (367 modules)
+ ✓ Compiled in 108ms (367 modules)
+ ✓ Compiled in 134ms (367 modules)
+ ✓ Compiled in 108ms (367 modules)
+ ✓ Compiled in 101ms (367 modules)
+ ✓ Compiled in 132ms (367 modules)
+ ✓ Compiled in 165ms (367 modules)
+ ○ Compiling /settings ...
+ ✓ Compiled /settings in 710ms (498 modules)
+ ○ Compiling /_error ...
+ GET /settings 500 in 5597ms
+ ✓ Compiled /_error in 3.4s (1212 modules)
+ ✓ Compiled in 1207ms (627 modules)

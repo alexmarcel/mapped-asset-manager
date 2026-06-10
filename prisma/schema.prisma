@@ -1,0 +1,150 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String         @id @default(cuid())
+  name         String
+  contact      String?
+  email        String         @unique
+  passwordHash String
+  role         String         @default("STAFF")
+  active       Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  assigned     Asset[]        @relation("CurrentAssetUser")
+  changes      AssetHistory[]
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  icon        String
+  color       String
+  description String?
+  assets      Asset[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Location {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  assets    Asset[]  @relation("AssetLocation")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Asset {
+  id                String              @id @default(cuid())
+  internalNumber    String              @unique
+  customNumber      String?             @unique
+  vendorAssetNumber String?
+  model             String
+  serialNumber      String?
+  purchaseDate      DateTime?
+  status            String              @default("in_use")
+  location          String?
+  locationId        String?
+  locationRef       Location?           @relation("AssetLocation", fields: [locationId], references: [id])
+  categoryId        String
+  category          Category            @relation(fields: [categoryId], references: [id])
+  currentUserId     String?
+  currentUser       User?               @relation("CurrentAssetUser", fields: [currentUserId], references: [id])
+  photoFileId       String?
+  photoFile         FileObject?         @relation("AssetPhoto", fields: [photoFileId], references: [id])
+  photos            AssetPhoto[]
+  placements        AssetMapPlacement[]
+  history           AssetHistory[]
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([status])
+  @@index([categoryId])
+  @@index([currentUserId])
+  @@index([locationId])
+}
+
+model Site {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  notes     String?
+  maps      FloorMap[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model FloorMap {
+  id         String              @id @default(cuid())
+  name       String
+  siteId     String
+  site       Site                @relation(fields: [siteId], references: [id])
+  imageFileId String?
+  imageFile  FileObject?        @relation("FloorMapImage", fields: [imageFileId], references: [id])
+  width      Int                 @default(1600)
+  height     Int                 @default(1000)
+  placements AssetMapPlacement[]
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  @@unique([siteId, name])
+}
+
+model AssetMapPlacement {
+  id        String   @id @default(cuid())
+  assetId   String
+  mapId     String
+  x         Float
+  y         Float
+  scale     Float    @default(1)
+  rotation  Float    @default(0)
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  map       FloorMap @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([assetId, mapId])
+}
+
+model AssetHistory {
+  id        String   @id @default(cuid())
+  assetId   String
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  changeType String
+  before    String?
+  after     String?
+  createdAt DateTime @default(now())
+}
+
+model AssetPhoto {
+  id        String     @id @default(cuid())
+  assetId   String
+  fileId    String
+  asset     Asset      @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  file      FileObject @relation("AssetPhotoFile", fields: [fileId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+
+  @@index([assetId])
+  @@index([fileId])
+}
+
+model FileObject {
+  id               String      @id @default(cuid())
+  key              String      @unique
+  originalFilename String
+  mimeType         String
+  size             Int
+  ownerType        String
+  publicUrl        String?
+  assetPhotos      Asset[]     @relation("AssetPhoto")
+  assetPhotoItems  AssetPhoto[] @relation("AssetPhotoFile")
+  floorMapImages   FloorMap[]  @relation("FloorMapImage")
+  createdAt        DateTime    @default(now())
+}

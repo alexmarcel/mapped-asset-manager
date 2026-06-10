@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  background: #f7f9fb;
+}
+
+body {
+  margin: 0;
+  background: #f7f9fb;
+  color: #1f2933;
+  overflow-x: hidden;
+}
+
+html {
+  overflow-x: hidden;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.map-grid {
+  background-image:
+    linear-gradient(rgba(31, 41, 51, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(31, 41, 51, 0.08) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.konvajs-content,
+.konvajs-content canvas {
+  max-width: 100% !important;
+}
