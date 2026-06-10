@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronRight, Download, Upload } from "lucide-react";
+import { ChevronDown, ChevronRight, Download, KeyRound, Upload } from "lucide-react";
 import { CategoryIcon } from "@/components/category-icon";
 import { CategoryIconSelect } from "@/components/category-icon-select";
 import type { BootstrapData, CurrentUser } from "@/lib/types";
@@ -30,6 +30,7 @@ export function SettingsScreen({ bootstrap, user }: { bootstrap: BootstrapData; 
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [locationsOpen, setLocationsOpen] = useState(false);
   const [usersOpen, setUsersOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [backupOpen, setBackupOpen] = useState(false);
   const [categoryName, setCategoryName] = useState("");
   const [categoryIcon, setCategoryIcon] = useState("Package");
@@ -44,19 +45,48 @@ export function SettingsScreen({ bootstrap, user }: { bootstrap: BootstrapData; 
   const [confirmation, setConfirmation] = useState("");
   const [restoreConfirmation, setRestoreConfirmation] = useState("");
   const [restoreFile, setRestoreFile] = useState<File | null>(null);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [backupMessage, setBackupMessage] = useState("");
+  const [accountMessage, setAccountMessage] = useState("");
   const [categoryMessage, setCategoryMessage] = useState("");
   const [locationMessage, setLocationMessage] = useState("");
   const [userMessage, setUserMessage] = useState("");
   const [resetting, setResetting] = useState(false);
   const [backingUp, setBackingUp] = useState(false);
   const [restoring, setRestoring] = useState(false);
+  const [passwordSaving, setPasswordSaving] = useState(false);
   const [categorySaving, setCategorySaving] = useState(false);
   const [locationSaving, setLocationSaving] = useState(false);
   const [userSaving, setUserSaving] = useState(false);
   const canReset = user.role === "ADMIN" && confirmation === "RESET";
   const canRestore = user.role === "ADMIN" && restoreConfirmation === "RESTORE" && Boolean(restoreFile);
+  const canChangePassword = Boolean(currentPassword && newPassword && confirmPassword && !passwordSaving);
+
+  async function changePassword() {
+    if (!canChangePassword) return;
+    setPasswordSaving(true);
+    setAccountMessage("");
+    const response = await fetch("/api/account/password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentPassword, newPassword, confirmPassword })
+    });
+    const data = await response.json().catch(() => null);
+    setPasswordSaving(false);
+
+    if (!response.ok) {
+      setAccountMessage(typeof data?.error === "string" ? data.error : "Unable to change password.");
+      return;
+    }
+
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setAccountMessage("Password changed.");
+  }
 
   async function addCategory() {
     if (user.role !== "ADMIN") return;
@@ -267,6 +297,62 @@ export function SettingsScreen({ bootstrap, user }: { bootstrap: BootstrapData; 
 
   return (
     <main className="mx-auto grid w-full max-w-5xl gap-4 px-4 pb-24 pt-4 md:grid-cols-2 md:pb-8">
+      <section className="rounded-lg border border-line bg-white p-4 shadow-soft md:col-span-2">
+        <CollapseHeader
+          open={accountOpen}
+          title="My account"
+          subtitle={`${user.name} (${user.email})`}
+          onToggle={() => setAccountOpen((open) => !open)}
+        />
+        {accountOpen ? (
+          <div className="mt-3 grid gap-3 rounded-md border border-line p-3 md:grid-cols-3">
+            <label className="text-sm font-medium">
+              Current password
+              <input
+                className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                type="password"
+                value={currentPassword}
+                onChange={(event) => setCurrentPassword(event.target.value)}
+                autoComplete="current-password"
+                disabled={passwordSaving}
+              />
+            </label>
+            <label className="text-sm font-medium">
+              New password
+              <input
+                className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                type="password"
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+                autoComplete="new-password"
+                disabled={passwordSaving}
+              />
+            </label>
+            <label className="text-sm font-medium">
+              Confirm new password
+              <input
+                className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                type="password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                autoComplete="new-password"
+                disabled={passwordSaving}
+              />
+            </label>
+            <button
+              className="inline-flex items-center justify-center gap-2 rounded-md bg-action px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300 md:col-span-3"
+              type="button"
+              disabled={!canChangePassword}
+              onClick={changePassword}
+            >
+              <KeyRound size={16} />
+              {passwordSaving ? "Changing..." : "Change password"}
+            </button>
+            {accountMessage ? <p className="text-sm text-slate-600 md:col-span-3">{accountMessage}</p> : null}
+          </div>
+        ) : null}
+      </section>
+
       <section className="rounded-lg border border-line bg-white p-4 shadow-soft">
         <CollapseHeader
           open={categoriesOpen}

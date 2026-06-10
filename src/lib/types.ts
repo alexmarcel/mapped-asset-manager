@@ -68,4 +68,12 @@ export type AssetRecord = {
     id: string;
     file: { publicUrl: string | null; originalFilename: string };
   }>;
+  history?: Array<{
+    id: string;
+    changeType: string;
+    before: string | null;
+    after: string | null;
+    createdAt: string;
+    user?: { name: string; email: string } | null;
+  }>;
 };

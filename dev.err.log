@@ -1,6 +1,0 @@
- ⨯ [Error [InvariantError]: Invariant: Expected clientReferenceManifest to be defined. This is a bug in Next.js.]
- ⨯ [Error [InvariantError]: Invariant: Expected clientReferenceManifest to be defined. This is a bug in Next.js.] {
-  page: '/settings'
-}
-<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\LXM\Documents\GitHub\mapped-asset-manager\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\LXM\Documents\GitHub\mapped-asset-manager\.next\cache\webpack\client-development\0.pack.gz'
-<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\LXM\Documents\GitHub\mapped-asset-manager\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\LXM\Documents\GitHub\mapped-asset-manager\.next\cache\webpack\client-development\0.pack.gz'

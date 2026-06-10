@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Camera, Trash2, Upload } from "lucide-react";
+import { Camera, ChevronDown, ChevronRight, Printer, QrCode, Trash2, Upload } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import type { AssetRecord, BootstrapData, CurrentUser } from "@/lib/types";
 import { type AssetStatusValue, statusLabels } from "@/lib/constants";
@@ -40,6 +40,7 @@ export function AssetFormScreen({
   const [form, setForm] = useState({ ...emptyForm, categoryId: defaultCategoryId });
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [message, setMessage] = useState("");
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
@@ -143,17 +144,32 @@ export function AssetFormScreen({
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 pb-24 pt-4 md:pb-8">
+      {asset ? (
+        <div className="mb-3 flex justify-end gap-2">
+          <Link
+            className="inline-flex items-center justify-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium shadow-soft"
+            href={`/a/${asset.internalNumber}`}
+            target="_blank"
+          >
+            <QrCode size={16} />
+            QR link
+          </Link>
+          <Link
+            className="inline-flex items-center justify-center gap-2 rounded-md bg-action px-3 py-2 text-sm font-semibold text-white shadow-soft"
+            href={`/assets/${asset.id}/print-qr`}
+            target="_blank"
+          >
+            <Printer size={16} />
+            Print QR
+          </Link>
+        </div>
+      ) : null}
       <form onSubmit={saveAsset} className="rounded-lg border border-line bg-white p-4 shadow-soft">
-        <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="mb-4">
           <div>
             <h2 className="font-semibold">{asset ? asset.internalNumber : assetId ? "Asset details" : "New asset"}</h2>
             <p className="text-sm text-slate-500">{assetId ? "Edit asset details, photo, and QR link." : "Create an asset record."}</p>
           </div>
-          {asset ? (
-            <Link className="rounded-md border border-line px-3 py-2 text-sm font-medium" href={`/a/${asset.internalNumber}`} target="_blank">
-              QR link
-            </Link>
-          ) : null}
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           <Field label="Model" value={form.model} onChange={(value) => setForm({ ...form, model: value })} required />
@@ -266,41 +282,268 @@ export function AssetFormScreen({
           {saving ? "Saving..." : assetId ? "Update asset" : "Create asset"}
         </button>
       </form>
+      {asset ? <AssetHistoryTimeline asset={asset} bootstrap={bootstrap} /> : null}
       {canDelete ? (
         <section className="mt-4 rounded-lg border border-red-200 bg-white p-4 shadow-soft">
-          <div className="flex items-start gap-3">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-red-50 text-red-600">
-              <Trash2 size={18} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="font-semibold text-red-700">Delete asset</h3>
-              <p className="mt-1 text-sm text-slate-600">
-                This removes the asset, history, map placement, and photo links from the system. Uploaded files are left in storage.
-              </p>
-            </div>
-          </div>
-          <label className="mt-4 block text-sm font-medium">
-            Type DELETE to confirm
-            <input
-              className="mt-1 w-full rounded-md border border-line px-3 py-2"
-              value={deleteConfirmation}
-              onChange={(event) => setDeleteConfirmation(event.target.value)}
-              autoComplete="off"
-            />
-          </label>
           <button
-            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md bg-red-600 px-4 py-2.5 font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+            className="flex w-full items-center justify-between gap-3 text-left"
             type="button"
-            disabled={deleteConfirmation !== "DELETE" || deleting}
-            onClick={deleteAsset}
+            onClick={() => setDeleteOpen((open) => !open)}
           >
-            <Trash2 size={18} />
-            {deleting ? "Deleting..." : "Delete asset"}
+            <span className="flex items-start gap-3">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-red-50 text-red-600">
+                <Trash2 size={18} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold text-red-700">Delete asset</span>
+                <span className="mt-1 block text-sm text-slate-600">
+                  This removes the asset, history, map placement, and photo links from the system. Uploaded files are left in storage.
+                </span>
+              </span>
+            </span>
+            {deleteOpen ? <ChevronDown className="shrink-0" size={18} /> : <ChevronRight className="shrink-0" size={18} />}
           </button>
+          {deleteOpen ? (
+            <>
+              <label className="mt-4 block text-sm font-medium">
+                Type DELETE to confirm
+                <input
+                  className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                  value={deleteConfirmation}
+                  onChange={(event) => setDeleteConfirmation(event.target.value)}
+                  autoComplete="off"
+                />
+              </label>
+              <button
+                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md bg-red-600 px-4 py-2.5 font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+                type="button"
+                disabled={deleteConfirmation !== "DELETE" || deleting}
+                onClick={deleteAsset}
+              >
+                <Trash2 size={18} />
+                {deleting ? "Deleting..." : "Delete asset"}
+              </button>
+            </>
+          ) : null}
         </section>
       ) : null}
     </main>
   );
+}
+
+function AssetHistoryTimeline({ asset, bootstrap }: { asset: AssetRecord; bootstrap: BootstrapData }) {
+  const history = asset.history || [];
+  const lookup = createHistoryLookup(bootstrap);
+
+  return (
+    <section className="mt-4 rounded-lg border border-line bg-white p-4 shadow-soft">
+      <div className="mb-4">
+        <h3 className="font-semibold">Asset history</h3>
+        <p className="text-sm text-slate-500">Latest activity first.</p>
+      </div>
+      {history.length ? (
+        <div className="space-y-0">
+          {history.map((item, index) => (
+            <div key={item.id} className="relative grid grid-cols-[20px,1fr] gap-3 pb-5 last:pb-0">
+              {index < history.length - 1 ? <span className="absolute left-[9px] top-5 h-full w-px bg-line" /> : null}
+              <span className="relative z-10 mt-1 h-5 w-5 rounded-full border-4 border-white bg-action shadow-sm" />
+              <div className="min-w-0 rounded-md border border-line bg-slate-50 p-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="font-medium">{formatHistoryDate(item.createdAt)}</p>
+                    <p className="mt-0.5 text-xs font-medium uppercase tracking-wide text-slate-500">{historyTitle(item.changeType)}</p>
+                    <HistoryDetail item={item} lookup={lookup} />
+                  </div>
+                </div>
+                <p className="mt-2 text-xs text-slate-500">{item.user ? `${item.user.name} (${item.user.email})` : "System"}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-md border border-dashed border-line p-6 text-center text-sm text-slate-500">
+          No history yet.
+        </div>
+      )}
+    </section>
+  );
+}
+
+function historyTitle(changeType: string) {
+  const titles: Record<string, string> = {
+    created: "Asset created",
+    updated: "Asset updated",
+    photo_uploaded: "Photo uploaded",
+    map_position_updated: "Map position updated",
+    map_position_removed: "Removed from map"
+  };
+  return titles[changeType] || changeType.replace(/_/g, " ");
+}
+
+type HistoryLookup = {
+  categories: Map<string, string>;
+  locations: Map<string, string>;
+  users: Map<string, string>;
+};
+
+function createHistoryLookup(bootstrap: BootstrapData): HistoryLookup {
+  return {
+    categories: new Map(bootstrap.categories.map((category) => [category.id, category.name])),
+    locations: new Map(bootstrap.locations.map((location) => [location.id, location.name])),
+    users: new Map(bootstrap.users.map((user) => [user.id, `${user.name} (${user.email})`]))
+  };
+}
+
+function historyDetail(item: NonNullable<AssetRecord["history"]>[number], lookup: HistoryLookup) {
+  const before = parseHistoryJson(item.before);
+  const after = parseHistoryJson(item.after);
+
+  switch (item.changeType) {
+    case "created":
+      return "Initial asset record saved.";
+    case "updated":
+      return assetUpdateChanges(before, after, lookup).length ? "" : "Changes recorded.";
+    case "photo_uploaded":
+      return filenameFromHistory(after) ? `Uploaded ${filenameFromHistory(after)}.` : "Photo added to asset.";
+    case "map_position_updated":
+      return mapMoveDetail(before, after);
+    case "map_position_removed":
+      return before && typeof before.x === "number" && typeof before.y === "number"
+        ? `Removed from x ${before.x}, y ${before.y}.`
+        : "Removed from map.";
+    default:
+      return "Activity recorded.";
+  }
+}
+
+function HistoryDetail({ item, lookup }: { item: NonNullable<AssetRecord["history"]>[number]; lookup: HistoryLookup }) {
+  if (item.changeType === "updated") {
+    const changes = assetUpdateChanges(parseHistoryJson(item.before), parseHistoryJson(item.after), lookup);
+    if (changes.length) {
+      return (
+        <ul className="mt-2 space-y-1 text-sm text-slate-600">
+          {changes.map((change) => (
+            <li key={change.label}>
+              <span className="font-medium text-slate-700">{change.label}:</span> {change.before} -&gt; {change.after}
+            </li>
+          ))}
+        </ul>
+      );
+    }
+  }
+
+  return <p className="mt-1 text-sm text-slate-600">{historyDetail(item, lookup)}</p>;
+}
+
+function parseHistoryJson(value: string | null) {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value);
+    return typeof parsed === "object" && parsed !== null ? parsed as Record<string, unknown> : null;
+  } catch {
+    return null;
+  }
+}
+
+function filenameFromHistory(value: Record<string, unknown> | null) {
+  return typeof value?.filename === "string" ? value.filename : "";
+}
+
+const updateFields = [
+  { key: "model", label: "Model" },
+  { key: "serialNumber", label: "Serial number" },
+  { key: "purchaseDate", label: "Purchase date", normalize: normalizeDateValue, format: formatDateValue },
+  { key: "status", label: "Status", format: formatStatusValue },
+  { key: "locationId", label: "Location", format: formatLocationValue },
+  { key: "currentUserId", label: "Current user", format: formatUserValue },
+  { key: "customNumber", label: "Custom asset number" },
+  { key: "vendorAssetNumber", label: "Vendor asset number" },
+  { key: "categoryId", label: "Category", format: formatCategoryValue }
+] as const;
+
+function assetUpdateChanges(before: Record<string, unknown> | null, after: Record<string, unknown> | null, lookup: HistoryLookup) {
+  if (!before || !after) return [];
+
+  return updateFields.flatMap((field) => {
+    const normalize = "normalize" in field ? field.normalize : normalizeHistoryValue;
+    const beforeRaw = normalize(before[field.key]);
+    const afterRaw = normalize(after[field.key]);
+    if (beforeRaw === afterRaw) return [];
+
+    return [{
+      label: field.label,
+      before: field.format ? field.format(beforeRaw, lookup) : displayHistoryValue(beforeRaw),
+      after: field.format ? field.format(afterRaw, lookup) : displayHistoryValue(afterRaw)
+    }];
+  });
+}
+
+function normalizeHistoryValue(value: unknown) {
+  if (value == null) return "";
+  if (typeof value === "string") return value.trim();
+  if (value instanceof Date) return value.toISOString();
+  return String(value).trim();
+}
+
+function normalizeDateValue(value: unknown) {
+  const raw = normalizeHistoryValue(value);
+  if (!raw) return "";
+
+  const dateOnly = raw.match(/^\d{4}-\d{2}-\d{2}/)?.[0];
+  return dateOnly || raw;
+}
+
+function displayHistoryValue(value: string) {
+  return value || "None";
+}
+
+function formatDateValue(value: string, _lookup?: HistoryLookup) {
+  if (!value) return "None";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(date);
+}
+
+function formatStatusValue(value: string, _lookup?: HistoryLookup) {
+  return value && value in statusLabels ? statusLabels[value as AssetStatusValue] : displayHistoryValue(value);
+}
+
+function formatLocationValue(value: string, lookup: HistoryLookup) {
+  if (!value) return "None";
+  return lookup.locations.get(value) || "Unknown location";
+}
+
+function formatUserValue(value: string, lookup: HistoryLookup) {
+  if (!value) return "Unassigned";
+  return lookup.users.get(value) || "Unknown user";
+}
+
+function formatCategoryValue(value: string, lookup: HistoryLookup) {
+  if (!value) return "None";
+  return lookup.categories.get(value) || "Unknown category";
+}
+
+function mapMoveDetail(before: Record<string, unknown> | null, after: Record<string, unknown> | null) {
+  const afterPoint = pointLabel(after);
+  if (!afterPoint) return "Map position saved.";
+
+  const beforePoint = pointLabel(before);
+  if (!beforePoint) return `Placed at ${afterPoint}.`;
+  return `Moved from ${beforePoint} to ${afterPoint}.`;
+}
+
+function pointLabel(value: Record<string, unknown> | null) {
+  if (typeof value?.x !== "number" || typeof value?.y !== "number") return "";
+  return `x ${value.x}, y ${value.y}`;
+}
+
+function formatHistoryDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short"
+  }).format(date);
 }
 
 function Field({
