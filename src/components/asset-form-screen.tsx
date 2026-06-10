@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Camera, Trash2 } from "lucide-react";
+import { Camera, Trash2, Upload } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import type { AssetRecord, BootstrapData, CurrentUser } from "@/lib/types";
 import { type AssetStatusValue, statusLabels } from "@/lib/constants";
@@ -42,7 +42,9 @@ export function AssetFormScreen({
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [message, setMessage] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const canDelete = Boolean(asset && currentUser?.role === "ADMIN");
 
   useEffect(() => {
@@ -95,16 +97,34 @@ export function AssetFormScreen({
     setMessage("Asset updated.");
   }
 
-  async function uploadPhoto(file: File) {
+  async function uploadPhotoFiles(files: FileList | File[]) {
     if (!asset) return;
-    const data = new FormData();
-    data.set("photo", file);
-    const response = await fetch(`/api/assets/${asset.id}/photo`, { method: "POST", body: data });
-    const result = await response.json();
-    if (response.ok) {
+    const selectedFiles = Array.from(files);
+    if (!selectedFiles.length) return;
+
+    setUploadingPhotos(true);
+    setMessage(selectedFiles.length === 1 ? "Uploading photo..." : `Uploading 1 of ${selectedFiles.length}...`);
+
+    for (let index = 0; index < selectedFiles.length; index += 1) {
+      const data = new FormData();
+      data.set("photo", selectedFiles[index]);
+      const response = await fetch(`/api/assets/${asset.id}/photo`, { method: "POST", body: data });
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        setUploadingPhotos(false);
+        setMessage(typeof result?.error === "string" ? result.error : "Unable to upload photo.");
+        return;
+      }
+
       setAsset(result.asset);
+      if (index < selectedFiles.length - 1) {
+        setMessage(`Uploading ${index + 2} of ${selectedFiles.length}...`);
+      }
     }
-    setMessage("Photo uploaded.");
+
+    setUploadingPhotos(false);
+    setMessage(selectedFiles.length === 1 ? "Photo uploaded." : "Photos uploaded.");
   }
 
   async function deleteAsset() {
@@ -177,23 +197,49 @@ export function AssetFormScreen({
           />
           <div className="md:col-span-2">
             <p className="text-sm font-medium">Photos</p>
-            <button
-              className="mt-1 inline-flex w-full items-center justify-center gap-2 rounded-md border border-line px-3 py-2 font-medium disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
-              type="button"
-              disabled={!asset}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Camera size={18} />
-              Take photo
-            </button>
+            <div className="mt-1 grid grid-cols-2 gap-2">
+              <button
+                className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-line px-3 py-2 font-medium disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                type="button"
+                disabled={!asset || uploadingPhotos}
+                onClick={() => uploadInputRef.current?.click()}
+              >
+                <Upload size={18} />
+                Upload photo
+              </button>
+              <button
+                className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-line px-3 py-2 font-medium disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                type="button"
+                disabled={!asset || uploadingPhotos}
+                onClick={() => cameraInputRef.current?.click()}
+              >
+                <Camera size={18} />
+                Take photo
+              </button>
+            </div>
             <input
-              ref={fileInputRef}
+              ref={uploadInputRef}
+              className="hidden"
+              type="file"
+              accept="image/*"
+              multiple
+              disabled={!asset || uploadingPhotos}
+              onChange={(event) => {
+                if (event.target.files) void uploadPhotoFiles(event.target.files);
+                event.target.value = "";
+              }}
+            />
+            <input
+              ref={cameraInputRef}
               className="hidden"
               type="file"
               accept="image/*"
               capture="environment"
-              disabled={!asset}
-              onChange={(event) => event.target.files?.[0] && uploadPhoto(event.target.files[0])}
+              disabled={!asset || uploadingPhotos}
+              onChange={(event) => {
+                if (event.target.files) void uploadPhotoFiles(event.target.files);
+                event.target.value = "";
+              }}
             />
             {asset?.photos?.length ? (
               <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -211,7 +257,7 @@ export function AssetFormScreen({
                 ))}
               </div>
             ) : (
-              <p className="mt-2 text-sm text-slate-500">{asset ? "No photos yet." : "Save the asset before taking photos."}</p>
+              <p className="mt-2 text-sm text-slate-500">{asset ? "No photos yet." : "Save the asset before adding photos."}</p>
             )}
           </div>
         </div>
