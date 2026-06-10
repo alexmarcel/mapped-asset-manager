@@ -6,9 +6,10 @@ Mobile-friendly IT asset management with asset registration, QR lookup, photos, 
 
 - Next.js, React, TypeScript, Tailwind CSS
 - Prisma and SQLite
-- MinIO S3-compatible file storage
+- Compressed local folder uploads in `data/uploads`
+- Manual ZIP backup and restore
 - Konva canvas map
-- Docker Compose for VPS deployment
+- Docker Compose for VPS deployment behind Traefik
 
 ## Local development
 
@@ -22,7 +23,7 @@ npm run dev
 
 Local development uses `npm run dev` directly. Docker is only for VPS deployment.
 
-The default SQLite database path is `data/app.db`. The `DATABASE_URL` uses `file:../data/app.db` because Prisma resolves SQLite paths from `prisma/schema.prisma`. For uploads, point the S3/MinIO variables to an S3-compatible service available from your machine. Photo and map upload features need that storage endpoint; the rest of the app can still be developed against SQLite.
+The default SQLite database path is `data/app.db`. The `DATABASE_URL` uses `file:../data/app.db` because Prisma resolves SQLite paths from `prisma/schema.prisma`. Uploaded asset photos and floor maps are compressed to WebP, stored under `data/uploads`, and served by the app through `/uploads/...`.
 
 Seed logins:
 
@@ -31,12 +32,39 @@ Seed logins:
 
 ## VPS Docker deployment
 
-1. Copy `.env.example` to `.env` and change passwords/secrets.
-2. Point `APP_URL` and `S3_PUBLIC_BASE_URL` at your domain.
-3. Run `docker compose up -d --build`.
-4. Run migrations in the app container: `docker compose exec app npm run prisma:deploy`.
-5. Seed the first users and defaults: `docker compose exec app npm run prisma:seed`.
+This repository includes a VPS-oriented `docker-compose.yml` for `aset.alexmarcel.com`. It expects an existing Traefik reverse proxy using the external Docker network `web` and ACME resolver `myresolver`.
 
-Update `Caddyfile` with your real domain before public VPS use.
+1. On the VPS, make sure the shared Traefik network exists:
 
-Back up the app database by copying `data/app.db` while the app is stopped, or by taking a filesystem snapshot of the mounted `data` directory.
+```bash
+docker network create web
+```
+
+2. Copy `.env.example` to `.env` and change passwords/secrets.
+3. Keep `DATABASE_URL="file:../data/app.db"`.
+4. Set production values such as:
+
+```bash
+APP_URL="https://aset.alexmarcel.com"
+UPLOAD_DIR="/app/data/uploads"
+```
+
+5. Run the deployment:
+
+```bash
+docker compose up -d --build
+```
+
+6. Run migrations in the app container:
+
+```bash
+docker compose exec aset npm run prisma:deploy
+```
+
+7. Seed the first users and defaults:
+
+```bash
+docker compose exec aset npm run prisma:seed
+```
+
+Use Settings > Backup and Restore to download a ZIP containing `data/app.db` and uploaded files. You can also back up the app manually by copying the whole `data` directory while the app is stopped, or by taking a filesystem snapshot of it.

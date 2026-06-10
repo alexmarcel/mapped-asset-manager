@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Plus, Search } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import type { AssetRecord, BootstrapData } from "@/components/asset-workspace";
+import type { AssetRecord, BootstrapData } from "@/lib/types";
 import { CategoryIcon } from "@/components/category-icon";
 import { statusLabels } from "@/lib/constants";
 import { SelectField } from "@/components/ui/select-field";

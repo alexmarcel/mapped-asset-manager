@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import type { CurrentUser } from "@/components/asset-workspace";
+import type { CurrentUser } from "@/lib/types";
 import { AppShell } from "@/components/app-shell";
 import { LoginCard } from "@/components/login-card";
 import { getCurrentUser } from "@/lib/auth";

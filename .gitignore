@@ -5,8 +5,7 @@ coverage
 .env
 .env.local
 *.tsbuildinfo
-minio-data
-postgres-data
 data/*.db
 data/*.db-journal
 data/*.db-wal
+data/uploads

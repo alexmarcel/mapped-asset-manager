@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Camera, Trash2 } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
-import type { AssetRecord, BootstrapData, CurrentUser } from "@/components/asset-workspace";
+import type { AssetRecord, BootstrapData, CurrentUser } from "@/lib/types";
 import { type AssetStatusValue, statusLabels } from "@/lib/constants";
 import { SelectField } from "@/components/ui/select-field";
 

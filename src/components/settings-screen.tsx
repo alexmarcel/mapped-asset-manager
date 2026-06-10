@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Download, Upload } from "lucide-react";
 import { CategoryIcon } from "@/components/category-icon";
 import { CategoryIconSelect } from "@/components/category-icon-select";
-import type { BootstrapData, CurrentUser } from "@/components/asset-workspace";
+import type { BootstrapData, CurrentUser } from "@/lib/types";
 
 type CategoryEdit = {
   id: string;
@@ -30,6 +30,7 @@ export function SettingsScreen({ bootstrap, user }: { bootstrap: BootstrapData; 
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [locationsOpen, setLocationsOpen] = useState(false);
   const [usersOpen, setUsersOpen] = useState(false);
+  const [backupOpen, setBackupOpen] = useState(false);
   const [categoryName, setCategoryName] = useState("");
   const [categoryIcon, setCategoryIcon] = useState("Package");
   const [categoryColor, setCategoryColor] = useState("#0f766e");
@@ -41,15 +42,21 @@ export function SettingsScreen({ bootstrap, user }: { bootstrap: BootstrapData; 
   const [editingLocation, setEditingLocation] = useState<LocationEdit | null>(null);
   const [editingUser, setEditingUser] = useState<UserEdit | null>(null);
   const [confirmation, setConfirmation] = useState("");
+  const [restoreConfirmation, setRestoreConfirmation] = useState("");
+  const [restoreFile, setRestoreFile] = useState<File | null>(null);
   const [message, setMessage] = useState("");
+  const [backupMessage, setBackupMessage] = useState("");
   const [categoryMessage, setCategoryMessage] = useState("");
   const [locationMessage, setLocationMessage] = useState("");
   const [userMessage, setUserMessage] = useState("");
   const [resetting, setResetting] = useState(false);
+  const [backingUp, setBackingUp] = useState(false);
+  const [restoring, setRestoring] = useState(false);
   const [categorySaving, setCategorySaving] = useState(false);
   const [locationSaving, setLocationSaving] = useState(false);
   const [userSaving, setUserSaving] = useState(false);
   const canReset = user.role === "ADMIN" && confirmation === "RESET";
+  const canRestore = user.role === "ADMIN" && restoreConfirmation === "RESTORE" && Boolean(restoreFile);
 
   async function addCategory() {
     if (user.role !== "ADMIN") return;
@@ -207,6 +214,54 @@ export function SettingsScreen({ bootstrap, user }: { bootstrap: BootstrapData; 
 
     setMessage("System reset complete. Admin accounts were maintained.");
     setConfirmation("");
+    window.location.reload();
+  }
+
+  async function downloadBackup() {
+    if (user.role !== "ADMIN") return;
+    setBackingUp(true);
+    setBackupMessage("");
+    const response = await fetch("/api/admin/backup");
+    setBackingUp(false);
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => null);
+      setBackupMessage(typeof data?.error === "string" ? data.error : "Backup failed.");
+      return;
+    }
+
+    const blob = await response.blob();
+    const disposition = response.headers.get("Content-Disposition") || "";
+    const filename = disposition.match(/filename="([^"]+)"/)?.[1] || "mapped-asset-manager-backup.zip";
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setBackupMessage("Backup downloaded.");
+  }
+
+  async function restoreBackup() {
+    if (!canRestore || !restoreFile) return;
+    setRestoring(true);
+    setBackupMessage("");
+    const data = new FormData();
+    data.set("backup", restoreFile);
+    const response = await fetch("/api/admin/restore", { method: "POST", body: data });
+    const result = await response.json().catch(() => null);
+    setRestoring(false);
+
+    if (!response.ok) {
+      setBackupMessage(typeof result?.error === "string" ? result.error : "Restore failed.");
+      return;
+    }
+
+    setBackupMessage("Restore complete.");
+    setRestoreConfirmation("");
+    setRestoreFile(null);
     window.location.reload();
   }
 
@@ -515,10 +570,70 @@ export function SettingsScreen({ bootstrap, user }: { bootstrap: BootstrapData; 
         ) : null}
       </section>
 
+      <section className="rounded-lg border border-line bg-white p-4 shadow-soft md:col-span-2">
+        <CollapseHeader
+          open={backupOpen}
+          title="Backup and Restore"
+          subtitle="Download or restore full system data"
+          onToggle={() => setBackupOpen((open) => !open)}
+        />
+        {backupOpen ? (
+          <div className="mt-3 grid gap-4 md:grid-cols-2">
+            <div className="rounded-md border border-line p-3">
+              <h3 className="font-medium">Backup</h3>
+              <p className="mt-1 text-sm text-slate-500">Download the database and uploaded files as one ZIP.</p>
+              <button
+                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md bg-action px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+                type="button"
+                disabled={user.role !== "ADMIN" || backingUp || restoring}
+                onClick={downloadBackup}
+              >
+                <Download size={16} />
+                {backingUp ? "Preparing..." : "Download backup"}
+              </button>
+            </div>
+            <div className="rounded-md border border-line p-3">
+              <h3 className="font-medium">Restore</h3>
+              <p className="mt-1 text-sm text-slate-500">Restore a backup ZIP. Your current admin account is kept.</p>
+              <label className="mt-3 block text-sm font-medium">
+                Backup ZIP
+                <input
+                  className="mt-1 w-full rounded-md border border-line px-3 py-2 text-sm"
+                  type="file"
+                  accept=".zip,application/zip"
+                  disabled={user.role !== "ADMIN" || restoring}
+                  onChange={(event) => setRestoreFile(event.target.files?.[0] || null)}
+                />
+              </label>
+              <label className="mt-3 block text-sm font-medium">
+                Type RESTORE to confirm
+                <input
+                  className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                  value={restoreConfirmation}
+                  onChange={(event) => setRestoreConfirmation(event.target.value)}
+                  disabled={user.role !== "ADMIN" || restoring}
+                />
+              </label>
+              <button
+                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+                type="button"
+                disabled={!canRestore || restoring || backingUp}
+                onClick={restoreBackup}
+              >
+                <Upload size={16} />
+                {restoring ? "Restoring..." : "Restore backup"}
+              </button>
+            </div>
+            {user.role !== "ADMIN" ? <p className="text-sm text-slate-500 md:col-span-2">Only admin users can back up or restore the system.</p> : null}
+            {backupMessage ? <p className="text-sm text-slate-600 md:col-span-2">{backupMessage}</p> : null}
+          </div>
+        ) : null}
+      </section>
+
       <section className="rounded-lg border border-red-200 bg-white p-4 shadow-soft md:col-span-2">
         <h2 className="font-semibold text-red-700">Reset System</h2>
         <p className="mt-2 text-sm text-slate-600">
-          Clears assets, staff users, maps, categories, locations, uploaded file records, placements, and asset history. Admin accounts remain.
+          Clears assets, staff users, maps, categories, locations, uploaded files, placements, and asset history. Admin accounts remain.
         </p>
         <div className="mt-4 grid gap-3 md:grid-cols-[1fr,180px]">
           <label className="text-sm font-medium">

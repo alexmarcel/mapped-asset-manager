@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { mkdir, rm } from "node:fs/promises";
 import { requireAdmin } from "@/lib/auth";
 import { defaultCategories, defaultLocations, defaultSite } from "@/lib/defaults";
 import { prisma } from "@/lib/prisma";
+import { uploadRoot } from "@/lib/upload-paths";
 
 export async function POST() {
   await requireAdmin();
@@ -39,6 +41,9 @@ export async function POST() {
       }
     });
   });
+
+  await rm(uploadRoot(), { recursive: true, force: true });
+  await mkdir(uploadRoot(), { recursive: true });
 
   return NextResponse.json({ ok: true });
 }

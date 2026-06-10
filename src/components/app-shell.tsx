@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FilePlus2, LayoutDashboard, Map, QrCode, Settings } from "lucide-react";
 import { cn } from "@/lib/ui";
-import type { CurrentUser } from "@/components/asset-workspace";
+import type { CurrentUser } from "@/lib/types";
 
 const navItems = [
   { label: "Assets", href: "/assets", icon: LayoutDashboard },

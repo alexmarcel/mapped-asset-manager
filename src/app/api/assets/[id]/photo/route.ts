@@ -3,6 +3,8 @@ import { requireUser } from "@/lib/auth";
 import { storeUpload } from "@/lib/files";
 import { prisma } from "@/lib/prisma";
 
+export const runtime = "nodejs";
+
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   const { id } = await params;

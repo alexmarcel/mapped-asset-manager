@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { AssetRecord, BootstrapData, CurrentUser } from "@/components/asset-workspace";
+import type { AssetRecord, BootstrapData, CurrentUser } from "@/lib/types";
 import { SelectField } from "@/components/ui/select-field";
 
 const MapCanvas = dynamic(() => import("@/components/map-canvas").then((mod) => mod.MapCanvas), {

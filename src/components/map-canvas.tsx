@@ -5,7 +5,7 @@ import { Crosshair, Eye, Image as ImageIcon, LocateFixed, Minus, Move, Plus, Sea
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Circle, Group, Image as KonvaImage, Layer, Stage, Text } from "react-konva";
 import useImage from "use-image";
-import type { AssetRecord, FloorMapOption } from "@/components/asset-workspace";
+import type { AssetRecord, FloorMapOption } from "@/lib/types";
 import { assetStatuses, statusLabels, type AssetStatusValue } from "@/lib/constants";
 import { CategoryIcon } from "@/components/category-icon";
 import { SelectField } from "@/components/ui/select-field";
