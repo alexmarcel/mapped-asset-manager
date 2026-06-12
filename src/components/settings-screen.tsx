@@ -32,6 +32,7 @@ export function SettingsScreen({ bootstrap, user }: { bootstrap: BootstrapData; 
   const [usersOpen, setUsersOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [backupOpen, setBackupOpen] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
   const [categoryName, setCategoryName] = useState("");
   const [categoryIcon, setCategoryIcon] = useState("Package");
   const [categoryColor, setCategoryColor] = useState("#0f766e");
@@ -716,32 +717,41 @@ export function SettingsScreen({ bootstrap, user }: { bootstrap: BootstrapData; 
         ) : null}
       </section>
 
-      <section className="rounded-lg border border-red-200 bg-white p-4 shadow-soft md:col-span-2">
-        <h2 className="font-semibold text-red-700">Reset System</h2>
-        <p className="mt-2 text-sm text-slate-600">
-          Clears assets, staff users, maps, categories, locations, uploaded files, placements, and asset history. Admin accounts remain.
-        </p>
-        <div className="mt-4 grid gap-3 md:grid-cols-[1fr,180px]">
-          <label className="text-sm font-medium">
-            Type RESET to confirm
-            <input
-              className="mt-1 w-full rounded-md border border-line px-3 py-2"
-              value={confirmation}
-              onChange={(event) => setConfirmation(event.target.value)}
-              disabled={user.role !== "ADMIN" || resetting}
-            />
-          </label>
-          <button
-            className="self-end rounded-md bg-red-600 px-4 py-2.5 font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
-            disabled={!canReset || resetting}
-            onClick={resetSystem}
-            type="button"
-          >
-            {resetting ? "Resetting..." : "Reset all"}
-          </button>
-        </div>
-        {user.role !== "ADMIN" ? <p className="mt-3 text-sm text-slate-500">Only admin users can reset the system.</p> : null}
-        {message ? <p className="mt-3 text-sm text-slate-600">{message}</p> : null}
+      <section className="rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-soft md:col-span-2">
+        <CollapseHeader
+          open={resetOpen}
+          title="Reset System"
+          subtitle="Clear system data while keeping admin accounts"
+          onToggle={() => setResetOpen((open) => !open)}
+        />
+        {resetOpen ? (
+          <>
+            <p className="mt-3 text-sm text-slate-600">
+              Clears assets, staff users, maps, categories, locations, uploaded files, placements, and asset history. Admin accounts remain.
+            </p>
+            <div className="mt-4 grid gap-3 md:grid-cols-[1fr,180px]">
+              <label className="text-sm font-medium">
+                Type RESET to confirm
+                <input
+                  className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                  value={confirmation}
+                  onChange={(event) => setConfirmation(event.target.value)}
+                  disabled={user.role !== "ADMIN" || resetting}
+                />
+              </label>
+              <button
+                className="self-end rounded-md bg-amber-600 px-4 py-2.5 font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+                disabled={!canReset || resetting}
+                onClick={resetSystem}
+                type="button"
+              >
+                {resetting ? "Resetting..." : "Reset all"}
+              </button>
+            </div>
+            {user.role !== "ADMIN" ? <p className="mt-3 text-sm text-slate-500">Only admin users can reset the system.</p> : null}
+            {message ? <p className="mt-3 text-sm text-slate-600">{message}</p> : null}
+          </>
+        ) : null}
       </section>
     </main>
   );

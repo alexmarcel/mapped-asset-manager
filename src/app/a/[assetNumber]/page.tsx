@@ -252,10 +252,12 @@ function assetUpdateChanges(before: Record<string, unknown> | null, after: Recor
     const afterRaw = normalize(after[field.key]);
     if (beforeRaw === afterRaw) return [];
 
+    const format = "format" in field ? field.format : null;
+
     return [{
       label: field.label,
-      before: field.format ? field.format(beforeRaw, lookup) : displayHistoryValue(beforeRaw),
-      after: field.format ? field.format(afterRaw, lookup) : displayHistoryValue(afterRaw)
+      before: format ? format(beforeRaw, lookup) : displayHistoryValue(beforeRaw),
+      after: format ? format(afterRaw, lookup) : displayHistoryValue(afterRaw)
     }];
   });
 }
@@ -279,14 +281,14 @@ function displayHistoryValue(value: string) {
   return value || "None";
 }
 
-function formatDateValue(value: string | Date | null, _lookup?: HistoryLookup) {
+function formatDateValue(value: string | Date | null) {
   if (!value) return "None";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(date);
 }
 
-function formatStatusValue(value: string, _lookup?: HistoryLookup) {
+function formatStatusValue(value: string) {
   return value && value in statusLabels ? statusLabels[value as AssetStatusValue] : displayHistoryValue(value);
 }
 

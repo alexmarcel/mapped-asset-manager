@@ -68,6 +68,7 @@ export type AssetRecord = {
     id: string;
     file: { publicUrl: string | null; originalFilename: string };
   }>;
+  _count?: { history: number };
   history?: Array<{
     id: string;
     changeType: string;

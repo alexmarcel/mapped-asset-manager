@@ -25,6 +25,21 @@ textarea {
   font: inherit;
 }
 
+.date-input {
+  appearance: none;
+}
+
+.date-input::-webkit-calendar-picker-indicator {
+  display: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.date-input::-webkit-inner-spin-button,
+.date-input::-webkit-clear-button {
+  display: none;
+}
+
 .map-grid {
   background-image:
     linear-gradient(rgba(31, 41, 51, 0.08) 1px, transparent 1px),

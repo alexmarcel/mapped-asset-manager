@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Crosshair, Eye, Image as ImageIcon, LocateFixed, Minus, Move, Plus, Search, Trash2 } from "lucide-react";
+import { Download, Crosshair, Eye, Image as ImageIcon, LocateFixed, Minus, Move, Plus, Search, Trash2 } from "lucide-react";
+import { jsPDF } from "jspdf";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Circle, Group, Image as KonvaImage, Layer, Stage, Text } from "react-konva";
 import useImage from "use-image";
@@ -27,6 +28,8 @@ export function MapCanvas({ map, assets }: { map: FloorMapOption; assets: AssetR
   const [assetQuery, setAssetQuery] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [status, setStatus] = useState("");
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const [exportMessage, setExportMessage] = useState("");
   const [image] = useImage(map.imageFile?.publicUrl || "", "anonymous");
 
   useEffect(() => {
@@ -110,6 +113,53 @@ export function MapCanvas({ map, assets }: { map: FloorMapOption; assets: AssetR
     setPosition({ x: 40, y: 40 });
   }
 
+  async function downloadPlanPdf() {
+    setExportingPdf(true);
+    setExportMessage("");
+
+    try {
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("Canvas export is not available.");
+
+      canvas.width = map.width;
+      canvas.height = map.height;
+
+      context.fillStyle = "#f8fafc";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (image) {
+        context.globalAlpha = 0.92;
+        context.drawImage(image, 0, 0, map.width, map.height);
+        context.globalAlpha = 1;
+      }
+
+      drawExportTitle(context, map);
+      placements.forEach((placement) => drawExportPin(context, placement));
+
+      const imageData = canvas.toDataURL("image/png");
+      const orientation: "landscape" | "portrait" = map.width > map.height ? "landscape" : "portrait";
+      const pdf = new jsPDF({ orientation, unit: "pt", format: "a4" });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 28;
+      const availableWidth = pageWidth - margin * 2;
+      const availableHeight = pageHeight - margin * 2;
+      const ratio = Math.min(availableWidth / map.width, availableHeight / map.height);
+      const outputWidth = map.width * ratio;
+      const outputHeight = map.height * ratio;
+      const x = (pageWidth - outputWidth) / 2;
+      const y = (pageHeight - outputHeight) / 2;
+
+      pdf.addImage(imageData, "PNG", x, y, outputWidth, outputHeight);
+      pdf.save(`${slugifyFilename(`${map.site.name}-${map.name}`)}.pdf`);
+    } catch {
+      setExportMessage("Unable to prepare the PDF. Try again after the map finishes loading.");
+    } finally {
+      setExportingPdf(false);
+    }
+  }
+
   const placedAssetIds = useMemo(() => new Set(placements.map((placement) => placement.asset.id)), [placements]);
   const normalizedQuery = assetQuery.trim().toLowerCase();
   const unplaced = useMemo(
@@ -156,50 +206,64 @@ export function MapCanvas({ map, assets }: { map: FloorMapOption; assets: AssetR
         </button>
       </div>
       <div className="mb-3 grid gap-3 lg:grid-cols-[minmax(0,1fr),320px]">
-      <div ref={containerRef} className="map-grid w-full min-w-0 max-w-full touch-none overflow-hidden rounded-lg border border-line bg-slate-50">
-        <Stage
-          width={size.width}
-          height={size.height}
-          draggable
-          x={position.x}
-          y={position.y}
-          scaleX={scale}
-          scaleY={scale}
-          onDragEnd={(event) => setPosition({ x: event.target.x(), y: event.target.y() })}
-          onPointerDown={(event) => {
-            if (event.target === event.target.getStage()) setSelectedAssetId("");
-          }}
-          onWheel={(event) => {
-            event.evt.preventDefault();
-            const next = Math.min(2.4, Math.max(0.25, scale + (event.evt.deltaY > 0 ? -0.08 : 0.08)));
-            setScale(next);
-          }}
+      <div className="min-w-0">
+        <div ref={containerRef} className="map-grid relative w-full min-w-0 max-w-full touch-none overflow-hidden rounded-lg border border-line bg-slate-50">
+          <div className="pointer-events-none absolute left-7 top-6 z-10">
+            <p className="text-xl font-semibold text-slate-700 sm:text-2xl">{map.site.name} - {map.name}</p>
+            {!image ? <p className="mt-1 text-sm text-slate-500">Upload a floor plan image or use this canvas directly.</p> : null}
+          </div>
+          <Stage
+            width={size.width}
+            height={size.height}
+            draggable
+            x={position.x}
+            y={position.y}
+            scaleX={scale}
+            scaleY={scale}
+            onDragEnd={(event) => {
+              if (event.target !== event.target.getStage()) return;
+              setPosition({ x: event.target.x(), y: event.target.y() });
+            }}
+            onPointerDown={(event) => {
+              if (event.target === event.target.getStage()) setSelectedAssetId("");
+            }}
+            onWheel={(event) => {
+              event.evt.preventDefault();
+              const next = Math.min(2.4, Math.max(0.25, scale + (event.evt.deltaY > 0 ? -0.08 : 0.08)));
+              setScale(next);
+            }}
+          >
+            <Layer>
+              {image ? (
+                <KonvaImage image={image} x={0} y={0} width={map.width} height={map.height} opacity={0.92} />
+              ) : null}
+              {placements.map((placement) => (
+                <AssetPin
+                  key={placement.asset.id}
+                  placement={placement}
+                  selected={placement.asset.id === selectedAssetId}
+                  onSelect={() => setSelectedAssetId(placement.asset.id)}
+                  onMove={(x, y) => {
+                    setPlacements((current) =>
+                      current.map((item) => (item.asset.id === placement.asset.id ? { ...item, x, y } : item))
+                    );
+                    void savePlacement(placement.asset.id, x, y);
+                  }}
+                />
+              ))}
+            </Layer>
+          </Stage>
+        </div>
+        <button
+          className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 sm:w-auto"
+          type="button"
+          disabled={exportingPdf}
+          onClick={downloadPlanPdf}
         >
-          <Layer>
-            {image ? (
-              <KonvaImage image={image} x={0} y={0} width={map.width} height={map.height} opacity={0.92} />
-            ) : (
-              <>
-                <Text x={36} y={34} text={`${map.site.name} - ${map.name}`} fontSize={32} fill="#334155" />
-                <Text x={38} y={78} text="Upload a floor plan image or use this canvas directly." fontSize={17} fill="#64748b" />
-              </>
-            )}
-            {placements.map((placement) => (
-              <AssetPin
-                key={placement.asset.id}
-                placement={placement}
-                selected={placement.asset.id === selectedAssetId}
-                onSelect={() => setSelectedAssetId(placement.asset.id)}
-                onMove={(x, y) => {
-                  setPlacements((current) =>
-                    current.map((item) => (item.asset.id === placement.asset.id ? { ...item, x, y } : item))
-                  );
-                  void savePlacement(placement.asset.id, x, y);
-                }}
-              />
-            ))}
-          </Layer>
-        </Stage>
+          <Download size={16} />
+          {exportingPdf ? "Preparing..." : "Download Plan as PDF"}
+        </button>
+        {exportMessage ? <p className="mt-2 text-sm text-slate-600">{exportMessage}</p> : null}
       </div>
       <aside className="min-w-0 rounded-lg border border-line bg-white p-3">
         {selectedPlacement ? (
@@ -313,7 +377,17 @@ function AssetPin({
       draggable
       onClick={onSelect}
       onTap={onSelect}
-      onDragEnd={(event) => onMove(Math.round(event.target.x()), Math.round(event.target.y()))}
+      onDragStart={(event) => {
+        event.cancelBubble = true;
+        onSelect();
+      }}
+      onDragMove={(event) => {
+        event.cancelBubble = true;
+      }}
+      onDragEnd={(event) => {
+        event.cancelBubble = true;
+        onMove(Math.round(event.target.x()), Math.round(event.target.y()));
+      }}
     >
       <Circle radius={selected ? 21 : 17} fill={fill} shadowColor="black" shadowBlur={8} shadowOpacity={0.18} />
       {selected ? <Circle radius={25} stroke={fill} strokeWidth={2} /> : null}
@@ -322,6 +396,60 @@ function AssetPin({
       <Text text={statusLabels[placement.asset.status]} x={24} y={2} fontSize={11} fill="#64748b" />
     </Group>
   );
+}
+
+function drawExportTitle(context: CanvasRenderingContext2D, map: FloorMapOption) {
+  const x = 28;
+  const y = 34;
+
+  context.save();
+  context.fillStyle = "rgba(248, 250, 252, 0.86)";
+  context.fillRect(x - 12, y - 24, Math.min(520, map.width - x), 72);
+  context.fillStyle = "#334155";
+  context.font = "600 26px Arial, sans-serif";
+  context.fillText(`${map.site.name} - ${map.name}`, x, y);
+  context.fillStyle = "#64748b";
+  context.font = "15px Arial, sans-serif";
+  context.fillText("Upload a floor plan image or use this canvas directly.", x, y + 26);
+  context.restore();
+}
+
+function drawExportPin(context: CanvasRenderingContext2D, placement: Placement) {
+  const fill = placement.asset.category.color;
+  const label = placement.asset.customNumber || placement.asset.internalNumber;
+
+  context.save();
+  context.shadowColor = "rgba(0, 0, 0, 0.18)";
+  context.shadowBlur = 8;
+  context.fillStyle = fill;
+  context.beginPath();
+  context.arc(placement.x, placement.y, 17, 0, Math.PI * 2);
+  context.fill();
+  context.shadowBlur = 0;
+
+  context.fillStyle = "#ffffff";
+  context.font = "700 16px Arial, sans-serif";
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.fillText(placement.asset.category.name.slice(0, 1), placement.x, placement.y + 1);
+
+  context.textAlign = "left";
+  context.textBaseline = "alphabetic";
+  context.fillStyle = "#1f2933";
+  context.font = "14px Arial, sans-serif";
+  context.fillText(label, placement.x + 24, placement.y - 4);
+  context.fillStyle = "#64748b";
+  context.font = "11px Arial, sans-serif";
+  context.fillText(statusLabels[placement.asset.status], placement.x + 24, placement.y + 13);
+  context.restore();
+}
+
+function slugifyFilename(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "map-plan";
 }
 
 function getImageDimensions(file: File) {

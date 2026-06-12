@@ -38,6 +38,7 @@ export function AssetFormScreen({
     : bootstrap.categories[0]?.id || "";
   const [asset, setAsset] = useState<AssetRecord | null>(null);
   const [form, setForm] = useState({ ...emptyForm, categoryId: defaultCategoryId });
+  const [loadingAsset, setLoadingAsset] = useState(Boolean(assetId));
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -51,10 +52,12 @@ export function AssetFormScreen({
   useEffect(() => {
     if (!assetId) return;
     async function loadAsset() {
+      setLoadingAsset(true);
       const response = await fetch(`/api/assets/${assetId}`);
       const data = await response.json();
       if (!response.ok) {
         setMessage("Asset not found.");
+        setLoadingAsset(false);
         return;
       }
       const loaded = data.asset as AssetRecord;
@@ -71,6 +74,7 @@ export function AssetFormScreen({
         customNumber: loaded.customNumber || "",
         vendorAssetNumber: loaded.vendorAssetNumber || ""
       });
+      setLoadingAsset(false);
     }
     void loadAsset();
   }, [assetId]);
@@ -144,33 +148,51 @@ export function AssetFormScreen({
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 pb-24 pt-4 md:pb-8">
-      {asset ? (
-        <div className="mb-3 flex justify-end gap-2">
-          <Link
-            className="inline-flex items-center justify-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium shadow-soft"
-            href={`/a/${asset.internalNumber}`}
-            target="_blank"
-          >
-            <QrCode size={16} />
-            QR link
-          </Link>
-          <Link
-            className="inline-flex items-center justify-center gap-2 rounded-md bg-action px-3 py-2 text-sm font-semibold text-white shadow-soft"
-            href={`/assets/${asset.id}/print-qr`}
-            target="_blank"
-          >
-            <Printer size={16} />
-            Print QR
-          </Link>
-        </div>
-      ) : null}
-      <form onSubmit={saveAsset} className="rounded-lg border border-line bg-white p-4 shadow-soft">
-        <div className="mb-4">
-          <div>
-            <h2 className="font-semibold">{asset ? asset.internalNumber : assetId ? "Asset details" : "New asset"}</h2>
-            <p className="text-sm text-slate-500">{assetId ? "Edit asset details, photo, and QR link." : "Create an asset record."}</p>
+      {assetId && loadingAsset ? (
+        <section className="grid min-h-[360px] place-items-center rounded-lg border border-line bg-white p-8 shadow-soft">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <span className="h-9 w-9 animate-spin rounded-full border-4 border-slate-200 border-t-action" />
+            <p className="text-sm font-medium text-slate-600">Loading asset details...</p>
           </div>
+        </section>
+      ) : null}
+      {assetId && !loadingAsset && !asset ? (
+        <section className="rounded-lg border border-line bg-white p-4 shadow-soft">
+          <h2 className="font-semibold text-ink">Asset details</h2>
+          <p className="mt-1 text-sm text-slate-500">{message || "Asset not found."}</p>
+        </section>
+      ) : null}
+      {(!assetId || asset) ? (
+        <>
+      <section className="mb-4 rounded-lg border border-line bg-white p-4 shadow-soft">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-semibold text-ink">{asset ? asset.internalNumber : assetId ? "Asset details" : "New asset"}</h2>
+            <p className="mt-1 text-sm text-slate-500">{assetId ? "Edit asset details, photo, and QR link." : "Create an asset record."}</p>
+          </div>
+          {asset ? (
+            <div className="flex shrink-0 gap-2">
+              <Link
+                className="inline-flex items-center justify-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-medium"
+                href={`/a/${asset.internalNumber}`}
+                target="_blank"
+              >
+                <QrCode size={16} />
+                QR link
+              </Link>
+              <Link
+                className="inline-flex items-center justify-center gap-2 rounded-md bg-action px-3 py-2 text-sm font-semibold text-white"
+                href={`/assets/${asset.id}/print-qr`}
+                target="_blank"
+              >
+                <Printer size={16} />
+                Print QR
+              </Link>
+            </div>
+          ) : null}
         </div>
+      </section>
+      <form onSubmit={saveAsset} className="rounded-lg border border-line bg-white p-4 shadow-soft">
         <div className="grid gap-3 md:grid-cols-2">
           <Field label="Model" value={form.model} onChange={(value) => setForm({ ...form, model: value })} required />
           <SelectField
@@ -181,7 +203,15 @@ export function AssetFormScreen({
           />
           <label className="text-sm font-medium">
             Purchase date
-            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" type="date" value={form.purchaseDate} onChange={(event) => setForm({ ...form, purchaseDate: event.target.value })} />
+            <span className="relative mt-1 block">
+              <input
+                className="date-input w-full rounded-md border border-line bg-white px-3 py-2 pr-9 text-sm outline-none focus:border-action focus:ring-2 focus:ring-action/20"
+                type="date"
+                value={form.purchaseDate}
+                onChange={(event) => setForm({ ...form, purchaseDate: event.target.value })}
+              />
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+            </span>
           </label>
           <Field label="Serial number" value={form.serialNumber} onChange={(value) => setForm({ ...form, serialNumber: value })} />
           <Field label="Vendor asset number" value={form.vendorAssetNumber} onChange={(value) => setForm({ ...form, vendorAssetNumber: value })} />
@@ -327,13 +357,38 @@ export function AssetFormScreen({
           ) : null}
         </section>
       ) : null}
+        </>
+      ) : null}
     </main>
   );
 }
 
 function AssetHistoryTimeline({ asset, bootstrap }: { asset: AssetRecord; bootstrap: BootstrapData }) {
-  const history = asset.history || [];
   const lookup = createHistoryLookup(bootstrap);
+  const [history, setHistory] = useState(asset.history || []);
+  const [totalHistory, setTotalHistory] = useState(asset._count?.history || asset.history?.length || 0);
+  const [loadingMoreHistory, setLoadingMoreHistory] = useState(false);
+  const hasMoreHistory = history.length < totalHistory;
+
+  useEffect(() => {
+    setHistory(asset.history || []);
+    setTotalHistory(asset._count?.history || asset.history?.length || 0);
+  }, [asset.id, asset.history, asset._count?.history]);
+
+  async function loadMoreHistory() {
+    if (loadingMoreHistory || !hasMoreHistory) return;
+    setLoadingMoreHistory(true);
+    const response = await fetch(`/api/assets/${asset.id}/history?skip=${history.length}`);
+    const data = await response.json().catch(() => null);
+    setLoadingMoreHistory(false);
+
+    if (!response.ok) return;
+
+    setHistory((current) => [...current, ...(data?.history || [])]);
+    if (typeof data?.total === "number") {
+      setTotalHistory(data.total);
+    }
+  }
 
   return (
     <section className="mt-4 rounded-lg border border-line bg-white p-4 shadow-soft">
@@ -342,24 +397,36 @@ function AssetHistoryTimeline({ asset, bootstrap }: { asset: AssetRecord; bootst
         <p className="text-sm text-slate-500">Latest activity first.</p>
       </div>
       {history.length ? (
-        <div className="space-y-0">
-          {history.map((item, index) => (
-            <div key={item.id} className="relative grid grid-cols-[20px,1fr] gap-3 pb-5 last:pb-0">
-              {index < history.length - 1 ? <span className="absolute left-[9px] top-5 h-full w-px bg-line" /> : null}
-              <span className="relative z-10 mt-1 h-5 w-5 rounded-full border-4 border-white bg-action shadow-sm" />
-              <div className="min-w-0 rounded-md border border-line bg-slate-50 p-3">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <p className="font-medium">{formatHistoryDate(item.createdAt)}</p>
-                    <p className="mt-0.5 text-xs font-medium uppercase tracking-wide text-slate-500">{historyTitle(item.changeType)}</p>
-                    <HistoryDetail item={item} lookup={lookup} />
+        <>
+          <div className="space-y-0">
+            {history.map((item, index) => (
+              <div key={item.id} className="relative grid grid-cols-[20px,1fr] gap-3 pb-5 last:pb-0">
+                {index < history.length - 1 ? <span className="absolute left-[9px] top-5 h-full w-px bg-line" /> : null}
+                <span className="relative z-10 mt-1 h-5 w-5 rounded-full border-4 border-white bg-action shadow-sm" />
+                <div className="min-w-0 rounded-md border border-line bg-slate-50 p-3">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="font-medium">{formatHistoryDate(item.createdAt)}</p>
+                      <p className="mt-0.5 text-xs font-medium uppercase tracking-wide text-slate-500">{historyTitle(item.changeType)}</p>
+                      <HistoryDetail item={item} lookup={lookup} />
+                    </div>
                   </div>
+                  <p className="mt-2 text-xs text-slate-500">{item.user ? `${item.user.name} (${item.user.email})` : "System"}</p>
                 </div>
-                <p className="mt-2 text-xs text-slate-500">{item.user ? `${item.user.name} (${item.user.email})` : "System"}</p>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+          {hasMoreHistory ? (
+            <button
+              className="mt-4 w-full rounded-md border border-line px-3 py-2 text-sm font-medium"
+              type="button"
+              disabled={loadingMoreHistory}
+              onClick={loadMoreHistory}
+            >
+              {loadingMoreHistory ? "Loading..." : "Load more history"}
+            </button>
+          ) : null}
+        </>
       ) : (
         <div className="rounded-md border border-dashed border-line p-6 text-center text-sm text-slate-500">
           No history yet.
@@ -470,10 +537,12 @@ function assetUpdateChanges(before: Record<string, unknown> | null, after: Recor
     const afterRaw = normalize(after[field.key]);
     if (beforeRaw === afterRaw) return [];
 
+    const format = "format" in field ? field.format : null;
+
     return [{
       label: field.label,
-      before: field.format ? field.format(beforeRaw, lookup) : displayHistoryValue(beforeRaw),
-      after: field.format ? field.format(afterRaw, lookup) : displayHistoryValue(afterRaw)
+      before: format ? format(beforeRaw, lookup) : displayHistoryValue(beforeRaw),
+      after: format ? format(afterRaw, lookup) : displayHistoryValue(afterRaw)
     }];
   });
 }
@@ -497,14 +566,14 @@ function displayHistoryValue(value: string) {
   return value || "None";
 }
 
-function formatDateValue(value: string, _lookup?: HistoryLookup) {
+function formatDateValue(value: string) {
   if (!value) return "None";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(date);
 }
 
-function formatStatusValue(value: string, _lookup?: HistoryLookup) {
+function formatStatusValue(value: string) {
   return value && value in statusLabels ? statusLabels[value as AssetStatusValue] : displayHistoryValue(value);
 }
 

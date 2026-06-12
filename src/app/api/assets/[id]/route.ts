@@ -16,7 +16,10 @@ const include = {
   history: {
     include: { user: { select: { name: true, email: true } } },
     orderBy: { createdAt: "desc" as const },
-    take: 20
+    take: 10
+  },
+  _count: {
+    select: { history: true }
   }
 };
 
