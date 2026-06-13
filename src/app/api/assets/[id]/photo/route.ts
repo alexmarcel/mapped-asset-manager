@@ -40,6 +40,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       photos: {
         include: { file: true },
         orderBy: { createdAt: "desc" }
+      },
+      documents: {
+        include: { file: true },
+        orderBy: { createdAt: "desc" }
+      },
+      history: {
+        include: { user: { select: { name: true, email: true } } },
+        orderBy: { createdAt: "desc" },
+        take: 10
+      },
+      _count: {
+        select: { history: true }
       }
     }
   });

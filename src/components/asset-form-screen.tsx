@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Camera, ChevronDown, ChevronRight, Printer, QrCode, Trash2, Upload } from "lucide-react";
+import { Camera, ChevronDown, ChevronRight, ExternalLink, FileText, Printer, QrCode, Trash2, Upload } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import type { AssetRecord, BootstrapData, CurrentUser } from "@/lib/types";
 import { type AssetStatusValue, statusLabels } from "@/lib/constants";
@@ -45,8 +45,11 @@ export function AssetFormScreen({
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [message, setMessage] = useState("");
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
+  const [removingDocumentId, setRemovingDocumentId] = useState("");
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const documentInputRef = useRef<HTMLInputElement>(null);
   const canDelete = Boolean(asset && currentUser?.role === "ADMIN");
 
   useEffect(() => {
@@ -130,6 +133,45 @@ export function AssetFormScreen({
 
     setUploadingPhotos(false);
     setMessage(selectedFiles.length === 1 ? "Photo uploaded." : "Photos uploaded.");
+  }
+
+  async function uploadDocumentFile(file: File) {
+    if (!asset) return;
+
+    setUploadingDocument(true);
+    setMessage("Uploading PDF...");
+
+    const data = new FormData();
+    data.set("document", file);
+    const response = await fetch(`/api/assets/${asset.id}/documents`, { method: "POST", body: data });
+    const result = await response.json().catch(() => null);
+    setUploadingDocument(false);
+
+    if (!response.ok) {
+      setMessage(typeof result?.error === "string" ? result.error : "Unable to upload PDF.");
+      return;
+    }
+
+    setAsset(result.asset);
+    setMessage("PDF attached.");
+  }
+
+  async function removeDocument(documentId: string) {
+    if (!asset) return;
+
+    setRemovingDocumentId(documentId);
+    setMessage("Removing PDF...");
+    const response = await fetch(`/api/assets/${asset.id}/documents/${documentId}`, { method: "DELETE" });
+    const result = await response.json().catch(() => null);
+    setRemovingDocumentId("");
+
+    if (!response.ok) {
+      setMessage(typeof result?.error === "string" ? result.error : "Unable to remove PDF.");
+      return;
+    }
+
+    setAsset(result.asset);
+    setMessage("PDF removed.");
   }
 
   async function deleteAsset() {
@@ -306,6 +348,70 @@ export function AssetFormScreen({
               <p className="mt-2 text-sm text-slate-500">{asset ? "No photos yet." : "Save the asset before adding photos."}</p>
             )}
           </div>
+          <div className="md:col-span-2">
+            <p className="text-sm font-medium">PDF attachments</p>
+            <button
+              className="mt-1 inline-flex w-full items-center justify-center gap-2 rounded-md border border-line px-3 py-2 font-medium disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+              type="button"
+              disabled={!asset || uploadingDocument}
+              onClick={() => documentInputRef.current?.click()}
+            >
+              <Upload size={18} />
+              {uploadingDocument ? "Uploading..." : "Upload PDF"}
+            </button>
+            <input
+              ref={documentInputRef}
+              className="hidden"
+              type="file"
+              accept=".pdf,application/pdf"
+              disabled={!asset || uploadingDocument}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void uploadDocumentFile(file);
+                event.target.value = "";
+              }}
+            />
+            {asset?.documents?.length ? (
+              <div className="mt-3 space-y-2">
+                {asset.documents.map((document) => (
+                  <div key={document.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-line bg-slate-50 p-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-white text-slate-600">
+                        <FileText size={18} />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold">{document.file.originalFilename}</p>
+                        <p className="text-xs text-slate-500">{formatFileSize(document.file.size)}</p>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {document.file.publicUrl ? (
+                        <Link
+                          className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1.5 text-xs font-medium"
+                          href={document.file.publicUrl}
+                          target="_blank"
+                        >
+                          <ExternalLink size={14} />
+                          Open
+                        </Link>
+                      ) : null}
+                      <button
+                        className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1.5 text-xs font-medium text-red-600 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                        type="button"
+                        disabled={removingDocumentId === document.id}
+                        onClick={() => void removeDocument(document.id)}
+                      >
+                        <Trash2 size={14} />
+                        {removingDocumentId === document.id ? "Removing..." : "Remove"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2 text-sm text-slate-500">{asset ? "No PDF attachments yet." : "Save the asset before adding PDFs."}</p>
+            )}
+          </div>
         </div>
         {message ? <p className="mt-3 text-sm text-slate-600">{message}</p> : null}
         <button className="mt-4 w-full rounded-md bg-action px-4 py-2.5 font-semibold text-white" disabled={saving}>
@@ -441,6 +547,8 @@ function historyTitle(changeType: string) {
     created: "Asset created",
     updated: "Asset updated",
     photo_uploaded: "Photo uploaded",
+    document_uploaded: "PDF attached",
+    document_removed: "PDF removed",
     map_position_updated: "Map position updated",
     map_position_removed: "Removed from map"
   };
@@ -472,6 +580,10 @@ function historyDetail(item: NonNullable<AssetRecord["history"]>[number], lookup
       return assetUpdateChanges(before, after, lookup).length ? "" : "Changes recorded.";
     case "photo_uploaded":
       return filenameFromHistory(after) ? `Uploaded ${filenameFromHistory(after)}.` : "Photo added to asset.";
+    case "document_uploaded":
+      return filenameFromHistory(after) ? `Attached ${filenameFromHistory(after)}.` : "PDF attached to asset.";
+    case "document_removed":
+      return filenameFromHistory(before) ? `Removed ${filenameFromHistory(before)}.` : "PDF removed from asset.";
     case "map_position_updated":
       return mapMoveDetail(before, after);
     case "map_position_removed":
@@ -514,6 +626,12 @@ function parseHistoryJson(value: string | null) {
 
 function filenameFromHistory(value: Record<string, unknown> | null) {
   return typeof value?.filename === "string" ? value.filename : "";
+}
+
+function formatFileSize(size: number) {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 const updateFields = [

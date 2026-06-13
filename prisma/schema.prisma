@@ -59,6 +59,7 @@ model Asset {
   photoFileId       String?
   photoFile         FileObject?         @relation("AssetPhoto", fields: [photoFileId], references: [id])
   photos            AssetPhoto[]
+  documents         AssetDocument[]
   placements        AssetMapPlacement[]
   history           AssetHistory[]
   createdAt         DateTime            @default(now())
@@ -135,6 +136,18 @@ model AssetPhoto {
   @@index([fileId])
 }
 
+model AssetDocument {
+  id        String     @id @default(cuid())
+  assetId   String
+  fileId    String
+  asset     Asset      @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  file      FileObject @relation("AssetDocumentFile", fields: [fileId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+
+  @@index([assetId])
+  @@index([fileId])
+}
+
 model FileObject {
   id               String      @id @default(cuid())
   key              String      @unique
@@ -145,6 +158,7 @@ model FileObject {
   publicUrl        String?
   assetPhotos      Asset[]     @relation("AssetPhoto")
   assetPhotoItems  AssetPhoto[] @relation("AssetPhotoFile")
+  assetDocuments   AssetDocument[] @relation("AssetDocumentFile")
   floorMapImages   FloorMap[]  @relation("FloorMapImage")
   createdAt        DateTime    @default(now())
 }

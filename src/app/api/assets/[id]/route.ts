@@ -13,6 +13,10 @@ const include = {
     include: { file: true },
     orderBy: { createdAt: "desc" as const }
   },
+  documents: {
+    include: { file: true },
+    orderBy: { createdAt: "desc" as const }
+  },
   history: {
     include: { user: { select: { name: true, email: true } } },
     orderBy: { createdAt: "desc" as const },
@@ -77,6 +81,7 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ id: str
   await prisma.$transaction(async (tx) => {
     await tx.assetHistory.deleteMany({ where: { assetId: id } });
     await tx.assetMapPlacement.deleteMany({ where: { assetId: id } });
+    await tx.assetDocument.deleteMany({ where: { assetId: id } });
     await tx.assetPhoto.deleteMany({ where: { assetId: id } });
     await tx.asset.delete({ where: { id } });
   });
