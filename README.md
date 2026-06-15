@@ -45,7 +45,7 @@ docker network create web
 4. Set production values such as:
 
 ```bash
-APP_URL="https://your-site.com"
+APP_URL="https://your-site.com/"
 UPLOAD_DIR="/app/data/uploads"
 ```
 
